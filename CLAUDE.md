@@ -44,8 +44,11 @@ git update-index --chmod=+x api/mvnw
 
 ## สภาพแวดล้อม
 
-- Windows, PowerShell 5.1 (ไม่มี `&&`) — บัญชีนี้**ไม่ใช่ admin ลง Docker/WSL ไม่ได้**
-- container image จึง build ใน GitHub Actions เท่านั้น ทดสอบในเครื่องไม่ได้
+- Windows, PowerShell 5.1 (ไม่มี `&&`) — บัญชีเป็น admin แต่ session ของ Claude **ไม่ elevated**
+  คำสั่งที่ต้องยกสิทธิ์ต้องให้ผู้ใช้รันเองใน terminal ที่ Run as administrator
+- **Docker Desktop ลงแล้วแต่ยังใช้ไม่ได้** — ขาด WSL2 (`docker ps` ตอบ 500)
+  ผู้ใช้ต้องรัน `wsl --install` แบบ elevated แล้วรีบูตก่อน จากนั้น build image ในเครื่องได้
+  ระหว่างนี้ container image ยัง build ใน GitHub Actions ซึ่งได้ log สาธารณะให้คนตรวจได้ด้วย
 - JMeter 5.6.3 ใช้ Groovy บน JDK 25 ไม่ได้ — test plan ใช้ฟังก์ชันในตัวแทน อย่าเปลี่ยนกลับ
 
 ## Deploy
