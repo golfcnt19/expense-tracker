@@ -1,0 +1,198 @@
+<header class="top">
+  <div class="wrap top__inner">
+    <span class="brand">expense<span class="brand__dot">.</span>tracker</span>
+    <span class="brand__sub mono">Angular 22 · Spring Boot 4 · PostgreSQL 18</span>
+  </div>
+</header>
+
+<main class="wrap grid">
+
+  <!-- ── ฟอร์ม ─────────────────────────────────────────────────────── -->
+  <section class="card form" aria-labelledby="form-title">
+    <h2 id="form-title" class="card__title">
+      {{ isEditing() ? 'แก้ไขรายการ' : 'เพิ่มรายการ' }}
+    </h2>
+
+    <form (ngSubmit)="save()" #f="ngForm" novalidate>
+      <label class="field">
+        <span class="field__label">จำนวนเงิน</span>
+        <input
+          class="field__input"
+          type="number"
+          step="0.01"
+          min="0.01"
+          inputmode="decimal"
+          placeholder="0.00"
+          [ngModel]="amount()"
+          (ngModelChange)="amount.set($event)"
+          name="amount"
+          [class.field__input--bad]="errors()['amount']"
+          required />
+        @if (errors()['amount']; as err) {
+          <span class="field__err">{{ err }}</span>
+        }
+      </label>
+
+      <label class="field">
+        <span class="field__label">หมวด</span>
+        <select
+          class="field__input"
+          [ngModel]="category()"
+          (ngModelChange)="category.set($event)"
+          name="category">
+          @for (c of categories; track c) {
+            <option [value]="c">{{ label[c] }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">วันที่</span>
+        <input
+          class="field__input"
+          type="date"
+          [ngModel]="spentOn()"
+          (ngModelChange)="spentOn.set($event)"
+          name="spentOn"
+          [class.field__input--bad]="errors()['spentOn']" />
+        @if (errors()['spentOn']; as err) {
+          <span class="field__err">{{ err }}</span>
+        }
+      </label>
+
+      <label class="field">
+        <span class="field__label">บันทึกช่วยจำ <em>(ไม่บังคับ)</em></span>
+        <input
+          class="field__input"
+          type="text"
+          maxlength="255"
+          placeholder="เช่น ข้าวเที่ยง"
+          [ngModel]="note()"
+          (ngModelChange)="note.set($event)"
+          name="note" />
+      </label>
+
+      @if (generalError()) {
+        <p class="alert" role="alert">{{ generalError() }}</p>
+      }
+
+      <div class="form__actions">
+        <button class="btn btn--solid" type="submit" [disabled]="saving()">
+          {{ saving() ? 'กำลังบันทึก…' : (isEditing() ? 'บันทึกการแก้ไข' : 'เพิ่ม') }}
+        </button>
+        @if (isEditing()) {
+          <button class="btn btn--ghost" type="button" (click)="resetForm()">ยกเลิก</button>
+        }
+      </div>
+    </form>
+  </section>
+
+  <!-- ── สรุป ──────────────────────────────────────────────────────── -->
+  <section class="card summary" aria-labelledby="sum-title">
+    <h2 id="sum-title" class="card__title">สรุปตามหมวด</h2>
+
+    @if (svc.summary.isLoading()) {
+      <p class="muted">กำลังโหลด…</p>
+    } @else if (svc.summary.error()) {
+      <p class="alert" role="alert">โหลดสรุปไม่สำเร็จ — API ตอบกลับไม่ได้</p>
+    } @else {
+      <p class="summary__total">
+        <span class="mono">{{ money(svc.summary.value().grandTotal) }}</span>
+        <span class="summary__baht">บาท</span>
+      </p>
+
+      @for (b of bars(); track b.category) {
+        <div class="bar">
+          <div class="bar__head">
+            <span>{{ label[b.category] }}</span>
+            <span class="mono">{{ money(b.total) }}</span>
+          </div>
+          <div class="bar__track"><div class="bar__fill" [style.width.%]="b.pct"></div></div>
+          <span class="bar__count mono">{{ b.count }} รายการ</span>
+        </div>
+      } @empty {
+        <p class="muted">ยังไม่มีข้อมูลในช่วงที่เลือก</p>
+      }
+    }
+  </section>
+
+  <!-- ── รายการ ────────────────────────────────────────────────────── -->
+  <section class="card list" aria-labelledby="list-title">
+    <div class="list__head">
+      <h2 id="list-title" class="card__title">รายการ</h2>
+
+      <div class="filters">
+        <label class="filter">
+          <span class="mono">ตั้งแต่</span>
+          <input type="date" [ngModel]="svc.from()"
+                 (ngModelChange)="svc.from.set($event); onFilterChange()" name="from" />
+        </label>
+        <label class="filter">
+          <span class="mono">ถึง</span>
+          <input type="date" [ngModel]="svc.to()"
+                 (ngModelChange)="svc.to.set($event); onFilterChange()" name="to" />
+        </label>
+        <label class="filter">
+          <span class="mono">หมวด</span>
+          <select [ngModel]="svc.category()"
+                  (ngModelChange)="svc.category.set($event); onFilterChange()" name="cat">
+            <option value="">ทั้งหมด</option>
+            @for (c of categories; track c) {
+              <option [value]="c">{{ label[c] }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    </div>
+
+    @if (svc.list.isLoading()) {
+      <p class="muted">กำลังโหลด…</p>
+    } @else if (svc.list.error()) {
+      <p class="alert" role="alert">โหลดรายการไม่สำเร็จ — ตรวจว่า API ทำงานอยู่ที่พอร์ต 8080</p>
+    } @else {
+      <div class="table-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">วันที่</th>
+              <th scope="col">หมวด</th>
+              <th scope="col">บันทึก</th>
+              <th scope="col" class="num">จำนวน</th>
+              <th scope="col"><span class="sr-only">จัดการ</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of svc.list.value().items; track e.id) {
+              <tr [class.row--editing]="editingId() === e.id">
+                <td class="mono">{{ e.spentOn }}</td>
+                <td><span class="chip">{{ label[e.category] }}</span></td>
+                <td class="note">{{ e.note || '—' }}</td>
+                <td class="num mono">{{ money(e.amount) }}</td>
+                <td class="actions">
+                  <button class="link" type="button" (click)="edit(e)">แก้</button>
+                  <button class="link link--danger" type="button" (click)="remove(e)">ลบ</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="muted center">ไม่มีรายการในช่วงที่เลือก</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (svc.list.value().totalPages > 1) {
+        <nav class="pager" aria-label="แบ่งหน้า">
+          <button class="btn btn--ghost" type="button"
+                  [disabled]="svc.page() === 0" (click)="prevPage()">ก่อนหน้า</button>
+          <span class="mono">
+            หน้า {{ svc.page() + 1 }} / {{ svc.list.value().totalPages }}
+            · ทั้งหมด {{ svc.list.value().totalItems }} รายการ
+          </span>
+          <button class="btn btn--ghost" type="button"
+                  [disabled]="svc.page() >= svc.list.value().totalPages - 1"
+                  (click)="nextPage()">ถัดไป</button>
+        </nav>
+      }
+    }
+  </section>
+</main>
