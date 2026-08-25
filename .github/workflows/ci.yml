@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# ยกเลิกรันเก่าเมื่อ push ใหม่เข้ามาที่ branch เดิม
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '25'
+  NODE_VERSION: '24'
+
+jobs:
+  # ── API ────────────────────────────────────────────────────────────────
+  api:
+    name: API · build & test
+    runs-on: ubuntu-latest
+
+    # เทสต์รันกับ PostgreSQL จริง ชนิดเดียวกับ production
+    # ไม่ใช่ H2 ที่ทำให้ SQL เฉพาะ Postgres ไม่ถูกทดสอบ
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: devpass
+          POSTGRES_DB: expense_tracker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Run tests
+        working-directory: api
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/expense_tracker_test
+          DB_USER: postgres
+          DB_PASSWORD: devpass
+        run: ./mvnw -B verify
+
+      - name: Package
+        working-directory: api
+        run: ./mvnw -B -DskipTests package
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: api-jar
+          path: api/target/*.jar
+          retention-days: 7
+
+      # เก็บผลเทสต์ไว้ดูได้แม้ job จะล้มเหลว
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: api-test-reports
+          path: api/target/surefire-reports/
+          retention-days: 7
+
+  # ── Angular ────────────────────────────────────────────────────────────
+  web:
+    name: Web · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        working-directory: web
+        run: npm ci
+
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web-dist
+          path: web/dist/
+          retention-days: 7
+
+  # ── Flutter ────────────────────────────────────────────────────────────
+  mobile:
+    name: Mobile · analyze, test & build web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      # analyze ก่อน test — ถ้าโค้ดมีปัญหาเชิงสถิต ไม่ต้องเสียเวลารันเทสต์
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze --fatal-infos
+
+      - name: Test
+        working-directory: mobile
+        run: flutter test
+
+      - name: Build web
+        working-directory: mobile
+        run: flutter build web --release --dart-define=API_BASE=${{ vars.API_BASE || 'http://localhost:8080' }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mobile-web
+          path: mobile/build/web/
+          retention-days: 7
+
+  # ── Container ──────────────────────────────────────────────────────────
+  container:
+    name: Container · build image
+    runs-on: ubuntu-latest
+    needs: api
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      # build อย่างเดียว ไม่ push — ยังไม่ได้ตั้ง registry
+      # เปลี่ยนเป็น push:true เมื่อพร้อม deploy
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Containerfile
+          push: false
+          tags: expense-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
