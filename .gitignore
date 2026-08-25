@@ -1,0 +1,36 @@
+# --- Java / Maven ---
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar
+
+# --- Node / Angular ---
+node_modules/
+dist/
+.angular/
+
+# --- Flutter ---
+.dart_tool/
+.flutter-plugins*
+build/
+*.iml
+
+# --- JMeter ---
+loadtest/*.log
+loadtest/results/raw/
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
