@@ -180,11 +180,21 @@ class _HomePageState extends State<HomePage> {
         icon: const Icon(Icons.add),
         label: const Text('เพิ่ม'),
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        color: _acc,
-        backgroundColor: _surface,
-        child: _buildBody(),
+      // จำกัดความกว้างไว้ที่ 560 แล้วจัดกลางจอ
+      //
+      // นี่คือ mobile client เปิดบนเดสก์ท็อปแล้วปล่อยให้ยืดเต็ม 1,500px
+      // แถวรายการจะกางจนตัวเลขไปติดขอบขวา ห่างจากชื่อรายการจนอ่านลำบาก
+      // บนมือถือจริงค่านี้ไม่มีผลเพราะจอแคบกว่าอยู่แล้ว
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: RefreshIndicator(
+            onRefresh: _load,
+            color: _acc,
+            backgroundColor: _surface,
+            child: _buildBody(),
+          ),
+        ),
       ),
     );
   }
