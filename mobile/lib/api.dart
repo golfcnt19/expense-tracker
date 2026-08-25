@@ -65,9 +65,15 @@ class ExpenseApi {
     return PagedResult.expensesFromJson(_json(r));
   }
 
-  Future<Summary> summary({required DateTime from, required DateTime to}) async {
+  Future<Summary> summary({
+    required DateTime from,
+    required DateTime to,
+  }) async {
     final r = await _client.get(
-      _uri('/api/expenses/summary', {'from': _isoDate(from), 'to': _isoDate(to)}),
+      _uri('/api/expenses/summary', {
+        'from': _isoDate(from),
+        'to': _isoDate(to),
+      }),
     );
     if (r.statusCode != 200) _fail(r);
     return Summary.fromJson(_json(r));
@@ -90,6 +96,27 @@ class ExpenseApi {
       }),
     );
     if (r.statusCode != 201) _fail(r);
+    return Expense.fromJson(_json(r));
+  }
+
+  Future<Expense> update(
+    String id, {
+    required double amount,
+    required Category category,
+    required DateTime spentOn,
+    String? note,
+  }) async {
+    final r = await _client.put(
+      _uri('/api/expenses/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'amount': amount,
+        'category': category.wire,
+        'spentOn': _isoDate(spentOn),
+        if (note != null && note.isNotEmpty) 'note': note,
+      }),
+    );
+    if (r.statusCode != 200) _fail(r);
     return Expense.fromJson(_json(r));
   }
 

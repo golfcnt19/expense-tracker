@@ -40,8 +40,12 @@ class ExpenseApp extends StatelessWidget {
           filled: true,
           fillColor: _raised,
           border: OutlineInputBorder(borderSide: BorderSide(color: _line)),
-          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: _line)),
-          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: _acc)),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: _line),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: _acc),
+          ),
         ),
       ),
       home: const HomePage(),
@@ -100,20 +104,24 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'เชื่อมต่อ API ไม่ได้ ($apiBase)';
+        _error = e is ApiException
+            ? e.message
+            : 'เชื่อมต่อ API ไม่ได้ ($apiBase)';
         _loading = false;
       });
     }
   }
 
-  Future<void> _add() async {
-    final created = await showModalBottomSheet<bool>(
+  /// เปิดฟอร์มเดียวกันทั้งเพิ่มและแก้ไข
+  /// ส่ง existing มา = โหมดแก้ไข ไม่ส่ง = โหมดเพิ่ม
+  Future<void> _openSheet({Expense? existing}) async {
+    final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: _surface,
-      builder: (_) => AddExpenseSheet(api: _api),
+      builder: (_) => ExpenseSheet(api: _api, existing: existing),
     );
-    if (created == true) await _load();
+    if (saved == true) await _load();
   }
 
   Future<void> _delete(Expense e) async {
@@ -159,7 +167,11 @@ class _HomePageState extends State<HomePage> {
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'expense.tracker',
-          style: TextStyle(color: _text, fontSize: 17, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: _text,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -174,7 +186,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _add,
+        onPressed: () => _openSheet(),
         backgroundColor: _acc,
         foregroundColor: const Color(0xFF04100E),
         icon: const Icon(Icons.add),
@@ -219,7 +231,10 @@ class _HomePageState extends State<HomePage> {
           Center(
             child: FilledButton(
               onPressed: _load,
-              style: FilledButton.styleFrom(backgroundColor: _acc, foregroundColor: _bg),
+              style: FilledButton.styleFrom(
+                backgroundColor: _acc,
+                foregroundColor: _bg,
+              ),
               child: const Text('ลองใหม่'),
             ),
           ),
@@ -252,11 +267,20 @@ class _HomePageState extends State<HomePage> {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
             child: Center(
-              child: Text('ไม่มีรายการในช่วงที่เลือก', style: TextStyle(color: _muted)),
+              child: Text(
+                'ไม่มีรายการในช่วงที่เลือก',
+                style: TextStyle(color: _muted),
+              ),
             ),
           )
         else
-          ...items.map((e) => _ExpenseTile(expense: e, onDelete: () => _delete(e))),
+          ...items.map(
+            (e) => _ExpenseTile(
+              expense: e,
+              onEdit: () => _openSheet(existing: e),
+              onDelete: () => _delete(e),
+            ),
+          ),
         if (_page != null && _page!.totalItems > items.length)
           Padding(
             padding: const EdgeInsets.only(top: 14),
@@ -283,7 +307,9 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final max = summary.byCategory.isEmpty
         ? 1.0
-        : summary.byCategory.map((c) => c.total).reduce((a, b) => a > b ? a : b);
+        : summary.byCategory
+              .map((c) => c.total)
+              .reduce((a, b) => a > b ? a : b);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -295,7 +321,10 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('รวมทั้งหมด', style: TextStyle(color: _muted, fontSize: 12)),
+          const Text(
+            'รวมทั้งหมด',
+            style: TextStyle(color: _muted, fontSize: 12),
+          ),
           const SizedBox(height: 4),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -318,11 +347,15 @@ class _SummaryCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(c.category.label,
-                      style: const TextStyle(color: _text, fontSize: 13)),
+                  child: Text(
+                    c.category.label,
+                    style: const TextStyle(color: _text, fontSize: 13),
+                  ),
                 ),
-                Text(_money.format(c.total),
-                    style: const TextStyle(color: _text, fontSize: 13)),
+                Text(
+                  _money.format(c.total),
+                  style: const TextStyle(color: _text, fontSize: 13),
+                ),
               ],
             ),
             const SizedBox(height: 5),
@@ -338,12 +371,17 @@ class _SummaryCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 3),
-            Text('${c.count} รายการ',
-                style: const TextStyle(color: _muted, fontSize: 11)),
+            Text(
+              '${c.count} รายการ',
+              style: const TextStyle(color: _muted, fontSize: 11),
+            ),
             const SizedBox(height: 10),
           ],
           if (summary.byCategory.isEmpty)
-            const Text('ยังไม่มีข้อมูล', style: TextStyle(color: _muted, fontSize: 13)),
+            const Text(
+              'ยังไม่มีข้อมูล',
+              style: TextStyle(color: _muted, fontSize: 13),
+            ),
         ],
       ),
     );
@@ -389,15 +427,20 @@ class _FilterBar extends StatelessWidget {
       children: [
         ActionChip(
           avatar: const Icon(Icons.date_range, size: 16, color: _muted),
-          label: Text('${_day.format(from)} → ${_day.format(to)}',
-              style: const TextStyle(fontSize: 12, color: _text)),
+          label: Text(
+            '${_day.format(from)} → ${_day.format(to)}',
+            style: const TextStyle(fontSize: 12, color: _text),
+          ),
           backgroundColor: _raised,
           side: const BorderSide(color: _line),
           onPressed: () => _pickRange(context),
         ),
         for (final c in [null, ...Category.values])
           FilterChip(
-            label: Text(c?.label ?? 'ทั้งหมด', style: const TextStyle(fontSize: 12)),
+            label: Text(
+              c?.label ?? 'ทั้งหมด',
+              style: const TextStyle(fontSize: 12),
+            ),
             selected: category == c,
             onSelected: (_) => onChanged(from, to, c),
             backgroundColor: _raised,
@@ -414,9 +457,14 @@ class _FilterBar extends StatelessWidget {
 // ── แถวรายการ ─────────────────────────────────────────────────────────────
 
 class _ExpenseTile extends StatelessWidget {
-  const _ExpenseTile({required this.expense, required this.onDelete});
+  const _ExpenseTile({
+    required this.expense,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final Expense expense;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -438,80 +486,125 @@ class _ExpenseTile extends StatelessWidget {
         onDelete();
         return false; // ให้ปุ่มยืนยันเป็นคนตัดสิน ไม่ลบทันทีที่ปัด
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: _surface,
-          border: Border.all(color: _line),
+      // แตะที่แถวเพื่อแก้ไข — บนมือถือการแตะทั้งแถวง่ายกว่าเล็งปุ่มเล็ก ๆ
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onEdit,
           borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: _surface,
+              border: Border.all(color: _line),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: _raised,
-                          border: Border.all(color: _line),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(expense.category.label,
-                            style: const TextStyle(color: _muted, fontSize: 11)),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _raised,
+                              border: Border.all(color: _line),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              expense.category.label,
+                              style: const TextStyle(
+                                color: _muted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _day.format(expense.spentOn),
+                            style: const TextStyle(color: _muted, fontSize: 11),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(_day.format(expense.spentOn),
-                          style: const TextStyle(color: _muted, fontSize: 11)),
+                      if (expense.note != null && expense.note!.isNotEmpty) ...[
+                        const SizedBox(height: 5),
+                        Text(
+                          expense.note!,
+                          style: const TextStyle(color: _text, fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
                   ),
-                  if (expense.note != null && expense.note!.isNotEmpty) ...[
-                    const SizedBox(height: 5),
-                    Text(expense.note!,
-                        style: const TextStyle(color: _text, fontSize: 13),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                  ],
-                ],
-              ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  _money.format(expense.amount),
+                  style: const TextStyle(
+                    color: _text,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right, color: _muted, size: 18),
+              ],
             ),
-            const SizedBox(width: 10),
-            Text(
-              _money.format(expense.amount),
-              style: const TextStyle(
-                  color: _text, fontSize: 15, fontWeight: FontWeight.w600),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ── ฟอร์มเพิ่มรายการ ──────────────────────────────────────────────────────
+// ── ฟอร์มเพิ่ม / แก้ไขรายการ ──────────────────────────────────────────────
 
-class AddExpenseSheet extends StatefulWidget {
-  const AddExpenseSheet({super.key, required this.api});
+class ExpenseSheet extends StatefulWidget {
+  const ExpenseSheet({super.key, required this.api, this.existing});
 
   final ExpenseApi api;
 
+  /// null = โหมดเพิ่ม, มีค่า = โหมดแก้ไข
+  final Expense? existing;
+
   @override
-  State<AddExpenseSheet> createState() => _AddExpenseSheetState();
+  State<ExpenseSheet> createState() => _ExpenseSheetState();
 }
 
-class _AddExpenseSheetState extends State<AddExpenseSheet> {
+class _ExpenseSheetState extends State<ExpenseSheet> {
   final _formKey = GlobalKey<FormState>();
   final _amountCtl = TextEditingController();
   final _noteCtl = TextEditingController();
 
-  Category _category = Category.food;
-  DateTime _spentOn = DateTime.now();
+  late Category _category;
+  late DateTime _spentOn;
   bool _saving = false;
   String? _serverError;
+
+  bool get _isEdit => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    _category = e?.category ?? Category.food;
+    _spentOn = e?.spentOn ?? DateTime.now();
+    if (e != null) {
+      // ตัดศูนย์ท้ายทิ้ง 250.00 -> 250 ให้พิมพ์แก้ง่าย
+      _amountCtl.text = e.amount == e.amount.roundToDouble()
+          ? e.amount.toStringAsFixed(0)
+          : e.amount.toString();
+      _noteCtl.text = e.note ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -529,12 +622,25 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
     });
 
     try {
-      await widget.api.create(
-        amount: double.parse(_amountCtl.text.trim()),
-        category: _category,
-        spentOn: _spentOn,
-        note: _noteCtl.text.trim(),
-      );
+      final amount = double.parse(_amountCtl.text.trim());
+      final note = _noteCtl.text.trim();
+
+      if (_isEdit) {
+        await widget.api.update(
+          widget.existing!.id,
+          amount: amount,
+          category: _category,
+          spentOn: _spentOn,
+          note: note,
+        );
+      } else {
+        await widget.api.create(
+          amount: amount,
+          category: _category,
+          spentOn: _spentOn,
+          note: note,
+        );
+      }
       if (mounted) Navigator.pop(context, true);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -567,15 +673,22 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('เพิ่มรายการ',
-                style: TextStyle(
-                    color: _text, fontSize: 16, fontWeight: FontWeight.w600)),
+            Text(
+              _isEdit ? 'แก้ไขรายการ' : 'เพิ่มรายการ',
+              style: TextStyle(
+                color: _text,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 16),
 
             TextFormField(
               controller: _amountCtl,
               autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: const TextStyle(color: _text),
               decoration: const InputDecoration(
                 labelText: 'จำนวนเงิน',
@@ -621,8 +734,10 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                   labelText: 'วันที่',
                   labelStyle: TextStyle(color: _muted),
                 ),
-                child: Text(_day.format(_spentOn),
-                    style: const TextStyle(color: _text)),
+                child: Text(
+                  _day.format(_spentOn),
+                  style: const TextStyle(color: _text),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -640,7 +755,10 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
 
             if (_serverError != null) ...[
               const SizedBox(height: 10),
-              Text(_serverError!, style: const TextStyle(color: _bad, fontSize: 13)),
+              Text(
+                _serverError!,
+                style: const TextStyle(color: _bad, fontSize: 13),
+              ),
             ],
 
             const SizedBox(height: 18),
@@ -653,7 +771,11 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                   foregroundColor: const Color(0xFF04100E),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text(_saving ? 'กำลังบันทึก…' : 'บันทึก'),
+                child: Text(
+                  _saving
+                      ? 'กำลังบันทึก…'
+                      : (_isEdit ? 'บันทึกการแก้ไข' : 'เพิ่ม'),
+                ),
               ),
             ),
           ],

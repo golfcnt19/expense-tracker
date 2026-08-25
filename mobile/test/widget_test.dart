@@ -143,6 +143,98 @@ void main() {
       );
     });
 
+    test('update ยิง PUT ไปที่ id ที่ถูกต้องพร้อม body ครบ', () async {
+      late http.Request captured;
+      final api = ExpenseApi(
+        client: MockClient((req) async {
+          captured = req;
+          return http.Response(
+            jsonEncode({
+              'id': 'abc-123',
+              'amount': 175.25,
+              'category': 'HEALTH',
+              'note': 'clinic',
+              'spentOn': '2026-08-25',
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+
+      final updated = await api.update(
+        'abc-123',
+        amount: 175.25,
+        category: Category.health,
+        spentOn: DateTime(2026, 8, 25),
+        note: 'clinic',
+      );
+
+      expect(captured.method, 'PUT');
+      expect(captured.url.path, endsWith('/api/expenses/abc-123'));
+
+      final sent = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(sent['amount'], 175.25);
+      expect(sent['category'], 'HEALTH');
+      expect(sent['spentOn'], '2026-08-25');
+      expect(sent['note'], 'clinic');
+
+      expect(updated.category, Category.health);
+      expect(updated.amount, 175.25);
+    });
+
+    test('update ที่ note ว่างไม่ส่งคีย์ note ไปเลย', () async {
+      late http.Request captured;
+      final api = ExpenseApi(
+        client: MockClient((req) async {
+          captured = req;
+          return http.Response(
+            jsonEncode({
+              'id': 'x',
+              'amount': 10,
+              'category': 'OTHER',
+              'note': null,
+              'spentOn': '2026-08-25',
+            }),
+            200,
+          );
+        }),
+      );
+
+      await api.update(
+        'x',
+        amount: 10,
+        category: Category.other,
+        spentOn: DateTime(2026, 8, 25),
+        note: '',
+      );
+
+      expect(jsonDecode(captured.body), isNot(contains('note')));
+    });
+
+    test('update ที่ไม่เจอ id คืน ApiException 404', () async {
+      final api = ExpenseApi(
+        client: MockClient((_) async => http.Response(
+              jsonEncode({
+                'status': 404,
+                'error': 'Not Found',
+                'message': 'Expense not found',
+              }),
+              404,
+            )),
+      );
+
+      expect(
+        () => api.update(
+          'missing',
+          amount: 1,
+          category: Category.food,
+          spentOn: DateTime(2026, 8, 25),
+        ),
+        throwsA(isA<ApiException>().having((e) => e.status, 'status', 404)),
+      );
+    });
+
     test('body ที่ไม่ใช่ JSON ยังคืน ApiException ไม่ใช่ FormatException', () async {
       final api = ExpenseApi(
         client: MockClient((_) async => http.Response('<html>502</html>', 502)),

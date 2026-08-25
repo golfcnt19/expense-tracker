@@ -19,9 +19,9 @@ enum Category {
   final String label;
 
   static Category fromWire(String value) => Category.values.firstWhere(
-        (c) => c.wire == value,
-        orElse: () => Category.other,
-      );
+    (c) => c.wire == value,
+    orElse: () => Category.other,
+  );
 }
 
 class Expense {
@@ -40,12 +40,12 @@ class Expense {
   final DateTime spentOn;
 
   factory Expense.fromJson(Map<String, dynamic> j) => Expense(
-        id: j['id'] as String,
-        amount: (j['amount'] as num).toDouble(),
-        category: Category.fromWire(j['category'] as String),
-        note: j['note'] as String?,
-        spentOn: DateTime.parse(j['spentOn'] as String),
-      );
+    id: j['id'] as String,
+    amount: (j['amount'] as num).toDouble(),
+    category: Category.fromWire(j['category'] as String),
+    note: j['note'] as String?,
+    spentOn: DateTime.parse(j['spentOn'] as String),
+  );
 }
 
 class PagedResult<T> {
@@ -61,7 +61,8 @@ class PagedResult<T> {
   final int totalItems;
   final int totalPages;
 
-  static PagedResult<Expense> expensesFromJson(Map<String, dynamic> j) => PagedResult<Expense>(
+  static PagedResult<Expense> expensesFromJson(Map<String, dynamic> j) =>
+      PagedResult<Expense>(
         items: (j['items'] as List<dynamic>)
             .map((e) => Expense.fromJson(e as Map<String, dynamic>))
             .toList(),
@@ -83,10 +84,10 @@ class CategoryTotal {
   final int count;
 
   factory CategoryTotal.fromJson(Map<String, dynamic> j) => CategoryTotal(
-        category: Category.fromWire(j['category'] as String),
-        total: (j['total'] as num).toDouble(),
-        count: (j['count'] as num).toInt(),
-      );
+    category: Category.fromWire(j['category'] as String),
+    total: (j['total'] as num).toDouble(),
+    count: (j['count'] as num).toInt(),
+  );
 }
 
 class Summary {
@@ -98,11 +99,11 @@ class Summary {
   static const empty = Summary(grandTotal: 0, byCategory: []);
 
   factory Summary.fromJson(Map<String, dynamic> j) => Summary(
-        grandTotal: (j['grandTotal'] as num).toDouble(),
-        byCategory: (j['byCategory'] as List<dynamic>)
-            .map((e) => CategoryTotal.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    grandTotal: (j['grandTotal'] as num).toDouble(),
+    byCategory: (j['byCategory'] as List<dynamic>)
+        .map((e) => CategoryTotal.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 }
 
 /// error ที่ API ส่งกลับมา แยก field error ออกมาให้ใช้ต่อได้
