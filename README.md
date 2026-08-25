@@ -29,6 +29,8 @@ Index Scan using idx_expense_spent_on_desc
 
 วิธีทำซ้ำและรายละเอียดทั้งหมดอยู่ที่ [`loadtest/README.md`](loadtest/README.md)
 
+วิธีเอาขึ้นออนไลน์ฟรี ดูที่ [`DEPLOY.md`](DEPLOY.md)
+
 ---
 
 ## สถาปัตยกรรม

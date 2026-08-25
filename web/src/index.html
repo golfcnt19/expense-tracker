@@ -1,11 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>Web</title>
+  <title>Expense Tracker</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ระบบบันทึกค่าใช้จ่าย — Angular 22 client ต่อกับ Spring Boot API">
+  <meta name="color-scheme" content="dark">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap">
+
+  <script>
+    // ที่อยู่ของ API — เว้นว่าง = ใช้ origin เดียวกัน (ตอน dev มี proxy คอยส่งต่อ)
+    // ตอน deploy ให้ CI แทนค่าบรรทัดนี้ด้วย origin จริงของ API
+    window.__API_BASE__ = '';
+  </script>
 </head>
 <body>
   <app-root></app-root>

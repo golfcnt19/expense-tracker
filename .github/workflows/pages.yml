@@ -1,0 +1,109 @@
+name: Deploy clients to Pages
+
+# ต้องตั้งค่าใน repo ก่อนถึงจะทำงาน
+#   Settings → Pages → Source = GitHub Actions
+#   Settings → Variables → API_BASE = https://expense-api.onrender.com
+#
+# ถ้ายังไม่ได้ตั้ง API_BASE workflow จะหยุดพร้อมข้อความบอก
+# แทนที่จะ deploy client ที่ชี้ไป localhost แล้วพังบนเว็บจริง
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# ให้ deploy ทีละครั้ง ไม่ยกเลิกตัวที่กำลังทำอยู่
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build clients
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: ตรวจว่าตั้ง API_BASE แล้ว
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+        run: |
+          if [ -z "$API_BASE" ]; then
+            echo "::error::ยังไม่ได้ตั้ง repository variable ชื่อ API_BASE"
+            echo "ตั้งที่ Settings → Secrets and variables → Actions → Variables"
+            echo "ค่าที่ใส่คือ origin ของ API เช่น https://expense-api.onrender.com"
+            exit 1
+          fi
+          echo "API_BASE = $API_BASE"
+
+      # ── Angular ────────────────────────────────────────────────────────
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build Angular
+        working-directory: web
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+        run: |
+          npm ci
+          # Pages เสิร์ฟที่ /expense-tracker/ ไม่ใช่ root — base href ต้องตรง
+          npx ng build --base-href /expense-tracker/
+
+      - name: ชี้ Angular ไปที่ API จริง
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+        run: |
+          f=$(find web/dist -name index.html | head -1)
+          echo "patching $f"
+          sed -i "s|window.__API_BASE__ = '';|window.__API_BASE__ = '${API_BASE}';|" "$f"
+          grep -o "__API_BASE__ = '[^']*'" "$f"
+
+      # ── Flutter ────────────────────────────────────────────────────────
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build Flutter web
+        working-directory: mobile
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+        run: |
+          flutter pub get
+          flutter build web --release \
+            --base-href /expense-tracker/mobile/ \
+            --dart-define=API_BASE="$API_BASE"
+
+      # ── รวมเป็นไซต์เดียว ───────────────────────────────────────────────
+      - name: Assemble site
+        run: |
+          mkdir -p site/mobile
+          cp -r "$(dirname "$(find web/dist -name index.html | head -1)")"/* site/
+          cp -r mobile/build/web/* site/mobile/
+          # กัน Jekyll กินโฟลเดอร์ที่ขึ้นต้นด้วย _
+          touch site/.nojekyll
+          echo "--- โครงสร้างที่จะ deploy ---"
+          find site -maxdepth 2 -name index.html
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

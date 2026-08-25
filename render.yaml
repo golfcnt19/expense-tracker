@@ -1,0 +1,54 @@
+# Render Blueprint — deploy API ขึ้น Render แบบฟรี
+#
+# วิธีใช้: Render Dashboard → New → Blueprint → เลือก repo นี้
+# Render จะอ่านไฟล์นี้แล้วสร้าง service ให้เอง
+#
+# ค่าที่ทำเครื่องหมาย sync:false ต้องกรอกเองในหน้า Render
+# เพราะเป็นข้อมูลเชื่อมต่อฐานข้อมูล ไม่ควรอยู่ใน repo
+
+services:
+  - type: web
+    name: expense-api
+    runtime: docker
+    dockerfilePath: ./Containerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    branch: main
+
+    # Render เรียกเส้นนี้เพื่อดูว่า service พร้อมรับ traffic หรือยัง
+    healthCheckPath: /actuator/health
+
+    envVars:
+      # ── ฐานข้อมูล — กรอกเองในหน้า Render ──────────────────────────────
+      # แนะนำ Neon (neon.tech) เพราะฟรีถาวร
+      # ส่วน Postgres ฟรีของ Render เองหมดอายุใน 90 วัน
+      #
+      # รูปแบบ: jdbc:postgresql://<host>/<db>?sslmode=require
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      # ── หน่วยความจำ ──────────────────────────────────────────────────
+      # free plan ให้ 512 MB ซึ่งตึงสำหรับ JVM
+      # ตั้ง 65% เผื่อ metaspace กับ stack ไม่ให้โดน OOM kill
+      # SerialGC กินหน่วยความจำน้อยกว่า G1 บนเครื่องเล็ก
+      # TieredStopAtLevel=1 ทำให้สตาร์ทเร็วขึ้น แลกกับ throughput สูงสุดที่ลดลง
+      - key: JAVA_OPTS
+        value: "-XX:MaxRAMPercentage=65 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"
+
+      # ── connection pool ──────────────────────────────────────────────
+      # free tier ของ Neon จำกัดจำนวน connection ตั้งให้พอดี ไม่ใช่ 10 แบบตอน dev
+      - key: DB_POOL_MAX
+        value: "5"
+      - key: DB_POOL_MIN
+        value: "1"
+
+      # ── CORS ─────────────────────────────────────────────────────────
+      # origin ของ client ที่อยู่บน GitHub Pages
+      # ถ้าเปลี่ยน URL ของ client ต้องแก้ตรงนี้ด้วย
+      - key: APP_CORS_ORIGINS
+        value: "https://golfcnt19.github.io"

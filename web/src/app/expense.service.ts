@@ -9,7 +9,19 @@ import type {
   Summary,
 } from './expense.models';
 
-const API = '/api/expenses';
+/**
+ * ที่อยู่ของ API
+ *
+ * ตอน dev เว้นว่างไว้ แล้วให้ proxy.conf.json ส่ง /api ไปที่ localhost:8080
+ * ตอน deploy ตั้งค่าใน index.html เป็น origin เต็ม เช่น https://api.example.com
+ *
+ * ทำเป็นค่า runtime ไม่ใช่ build-time เพื่อให้ build ชุดเดียวย้ายไปหลาย
+ * environment ได้โดยไม่ต้อง compile ใหม่ — แค่แก้บรรทัดเดียวใน index.html
+ */
+const API_BASE =
+  (globalThis as { __API_BASE__?: string }).__API_BASE__?.replace(/\/$/, '') ?? '';
+
+const API = `${API_BASE}/api/expenses`;
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
