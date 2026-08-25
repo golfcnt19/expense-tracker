@@ -1,0 +1,26 @@
+﻿Expense API — load test results
+รันเมื่อ 2026-08-25 · 200,000 แถว · 50 users · ramp-up 10s · duration 60s
+
+
+ไฟล์      : results/with-index.jtl
+ระยะเวลา  : 60.0 วินาที
+throughput: 2675.2 req/s
+ทั้งหมด   : 160413 requests, error 0 (0.00%)
+
+endpoint        samples   err%    avg    p50    p95    p99    max
+-----------------------------------------------------------------
+GET list          80218   0.00     15     16     21     32     91
+GET summary       80195   0.00     19     20     26     36     94
+
+===================== ไม่มี index =====================
+
+ไฟล์      : results/no-index.jtl
+ระยะเวลา  : 60.0 วินาที
+throughput: 193.5 req/s
+ทั้งหมด   : 11600 requests, error 0 (0.00%)
+
+endpoint        samples   err%    avg    p50    p95    p99    max
+-----------------------------------------------------------------
+GET list           5815   0.00    255    255    435    528    963
+GET summary        5785   0.00    220    233    365    473    883
+

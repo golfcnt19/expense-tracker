@@ -18,7 +18,8 @@ build/
 
 # --- JMeter ---
 loadtest/*.log
-loadtest/results/raw/
+# raw JTL ใหญ่หลายสิบ MB ไม่เอาเข้า repo — เก็บแค่ results/summary.txt
+loadtest/results/*.jtl
 
 # --- IDE ---
 .idea/
