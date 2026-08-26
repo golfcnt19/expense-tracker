@@ -16,9 +16,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
 
-  <!-- black-translucent ทำให้พื้นหลังแอปไหลขึ้นไปใต้ status bar
-       เข้ากับธีมดำ ไม่มีแถบขาวคาดหัว -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- ⚠️ อย่าเปลี่ยนกลับไปเป็น black-translucent
+       ค่านั้นทำให้ web view กินพื้นที่ทั้งจอรวมส่วนใต้ status bar ซึ่งดูสวยกว่าก็จริง
+       แต่บน iOS standalone (เปิดจากไอคอนหน้าจอโฮม) WebKit รายงานพิกัดนิ้วที่แตะ
+       เหลื่อมจากตำแหน่งที่วาดจริงราวความสูงของ status bar (~47-59px)
+       อาการคือกดปุ่มแล้วไม่ติด ต้องกดสูงกว่าปุ่มที่เห็น
+
+       black = status bar ทึบสีดำ iOS จะวาง web view ไว้ใต้ status bar
+       พิกัดที่แตะกับที่วาดจึงตรงกัน ธีมแอปเป็น #070B0D อยู่แล้ว หน้าตาแทบไม่ต่าง -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Expense">
   <meta name="theme-color" content="#070B0D">
   <meta name="color-scheme" content="dark">
@@ -32,9 +38,56 @@
   <style>
     /* กันจอขาววาบก่อน Flutter จะวาดเสร็จ */
     html, body { margin: 0; padding: 0; background: #070B0D; }
+
+    /* ── หน้าจอระหว่างรอ Flutter บูท ──────────────────────────────────
+       ก่อนวาดเฟรมแรกได้ ต้องโหลด main.dart.js กับ canvaskit.wasm
+       รวมกันเกือบ 10 MB ถ้าไม่มีอะไรขึ้นเลยระหว่างนั้น ผู้ใช้จะเห็น
+       จอดำล้วนแล้วนึกว่าแอปพัง โดยเฉพาะบนเน็ตมือถือช้า ๆ
+
+       บล็อกนี้ยังใช้วินิจฉัยได้ด้วย
+         ไม่ขึ้นอะไรเลย   = หน้าเว็บเองโหลดไม่ได้
+         ค้างที่วงหมุน    = Flutter บูทไม่ผ่าน
+         ขึ้นแล้วหายไป    = ปกติ                                        */
+    #boot {
+      position: fixed; inset: 0; z-index: 9;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px;
+      background: #070B0D; color: #8A9A97;
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-align: center; padding: 24px;
+    }
+    #boot.is-done { display: none; }
+    #boot .ring {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 2px solid #1A2427; border-top-color: #4FD1C5;
+      animation: spin .9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #boot .slow { color: #F0A868; max-width: 30ch; display: none; }
+    #boot.is-slow .slow { display: block; }
+    @media (prefers-reduced-motion: reduce) {
+      #boot .ring { animation-duration: 3s; }
+    }
   </style>
 </head>
 <body>
+  <div id="boot">
+    <div class="ring" aria-hidden="true"></div>
+    <p>กำลังโหลด…</p>
+    <p class="slow">ครั้งแรกต้องโหลดประมาณ 10 MB ถ้าเน็ตช้าอาจใช้เวลาสักครู่</p>
+  </div>
+
+  <script>
+    // Flutter ยิง event นี้ให้เองตอนวาดเฟรมแรกเสร็จ
+    var boot = document.getElementById('boot');
+    window.addEventListener('flutter-first-frame', function () {
+      boot.classList.add('is-done');
+    });
+    // ยังไม่เสร็จใน 8 วิ แปลว่าเน็ตช้าจริง บอกผู้ใช้ว่ากำลังโหลดอะไรอยู่
+    setTimeout(function () {
+      if (!boot.classList.contains('is-done')) boot.classList.add('is-slow');
+    }, 8000);
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

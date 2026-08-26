@@ -74,8 +74,14 @@ jobs:
           API_BASE: ${{ vars.API_BASE }}
         run: |
           flutter pub get
+          # --no-web-resources-cdn = ใช้ canvaskit ที่ build มาไว้ในโฟลเดอร์ตัวเอง
+          # ไม่งั้น flutter_bootstrap.js จะชี้ไป gstatic.com ทั้งที่ canvaskit/
+          # ถูก deploy ขึ้น Pages ไปด้วยอยู่แล้ว กลายเป็นไฟล์ 13 MB ที่ไม่มีใครใช้
+          # แล้วยังแขวนชะตาแอปไว้กับ CDN ข้างนอก — เน็ตไหนบล็อก gstatic
+          # แอปจะโหลด engine ไม่ได้แล้วค้างเป็นจอดำ
           flutter build web --release \
             --base-href /expense-tracker/mobile/ \
+            --no-web-resources-cdn \
             --dart-define=API_BASE="$API_BASE"
 
       # ── รวมเป็นไซต์เดียว ───────────────────────────────────────────────
